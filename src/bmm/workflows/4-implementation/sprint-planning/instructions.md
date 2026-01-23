@@ -2,6 +2,7 @@
 
 <critical>The workflow execution engine is governed by: {project-root}/_bmad/core/tasks/workflow.xml</critical>
 <critical>You MUST have already loaded and processed: {project-root}/_bmad/bmm/workflows/4-implementation/sprint-planning/workflow.yaml</critical>
+<critical>🔧 AZURE DEVOPS INTEGRATION - Creates Feature work items for each epic when MCP is available</critical>
 
 ## 📚 Document Discovery - Full Epic Loading
 
@@ -21,6 +22,27 @@
 **Fuzzy matching**: Be flexible with document names - users may use variations like `epics.md`, `bmm-epics.md`, `user-stories.md`, etc.
 
 <workflow>
+
+<!-- Azure DevOps MCP Preflight Check -->
+<step n="0" goal="Check Azure DevOps MCP availability">
+  <critical>AZURE DEVOPS MCP CONNECTION IS REQUIRED FOR SPRINT PLANNING</critical>
+  <action>Try: Call MCP: list_work_items with wiql="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '<azure-collection>'" and top=1</action>
+  <check if="MCP call succeeds">
+    <action>Set azure_available = true</action>
+    <output>ℹ️ Azure DevOps MCP connected - will create Feature work items for epics</output>
+  </check>
+  <check if="MCP call fails or times out">
+    <output>🚫 Azure DevOps MCP not available</output>
+    <output>Azure DevOps MCP connection is REQUIRED for this workflow.</output>
+    <output>Please verify:</output>
+    <output>   1. MCP server is running (check .mcp.json configuration)</output>
+    <output>   2. PAT token is valid and not expired</output>
+    <output>   3. Network connectivity to Azure DevOps is available</output>
+    <output>   4. Org URL and project settings are correct</output>
+    <action>HALT - Cannot proceed without Azure DevOps MCP connection</action>
+  </check>
+  <action>Continue to step 1</action>
+</step>
 
 <step n="1" goal="Parse epic files and extract all work items">
 <action>Communicate in {communication_language} with {user_name}</action>
@@ -141,6 +163,20 @@ development_status:
 <action>Write the complete sprint status YAML to {status_file}</action>
 <action>CRITICAL: Metadata appears TWICE - once as comments (#) for documentation, once as YAML key:value fields for parsing</action>
 <action>Ensure all items are ordered: epic, its stories, its retrospective, next epic...</action>
+
+<!-- Azure DevOps Feature creation for each epic -->
+<check if="azure_available == true">
+  <action>For each epic found in Step 1, create or find Azure Feature work item:</action>
+  <action>Call MCP: create_work_item with:
+{
+  "workItemType": "Feature",
+  "title": "Epic {{epic_num}}: {{epic_title}}",
+  "description": "<div><p>Epic {{epic_num}} from {project_name}</p></div>",
+  "state": "New"
+}</action>
+  <action>Store returned Feature ID as {{azure_feature_id_{{epic_num}}}</action>
+  <output>✅ Azure DevOps: Created Feature {{azure_feature_id_{{epic_num}}} for Epic {{epic_num}}</output>
+</check>
 </step>
 
 <step n="5" goal="Validate and report">

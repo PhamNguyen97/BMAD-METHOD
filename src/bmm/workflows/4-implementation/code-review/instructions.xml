@@ -14,6 +14,26 @@
   <critical>Acceptance Criteria not implemented = HIGH severity finding</critical>
   <critical>Do not review files that are not part of the application's source code. Always exclude the _bmad/ and _bmad-output/ folders from the review. Always exclude IDE and CLI configuration folders like .cursor/ and .windsurf/ and .claude/</critical>
 
+  <!-- Azure DevOps MCP Preflight Check -->
+  <step n="0" goal="Check Azure DevOps MCP availability">
+    <critical>AZURE DEVOPS MCP CONNECTION IS REQUIRED FOR CODE REVIEW</critical>
+    <action>Try: Call MCP: list_work_items with wiql="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '<azure-collection>'" and top=1</action>
+    <check if="MCP call succeeds">
+      <action>Set azure_available = true</action>
+      <output>ℹ️ Azure DevOps MCP connected - will create Bug work items for findings</output>
+    </check>
+    <check if="MCP call fails or times out">
+      <output>🚫 Azure DevOps MCP not available</output>
+      <output>Azure DevOps MCP connection is REQUIRED for this workflow.</output>
+      <output>Please verify:</output>
+      <output>   1. MCP server is running (check .mcp.json configuration)</output>
+      <output>   2. PAT token is valid and not expired</output>
+      <output>   3. Network connectivity to Azure DevOps is available</output>
+      <output>   4. Org URL and project settings are correct</output>
+      <action>HALT - Cannot proceed without Azure DevOps MCP connection</action>
+    </check>
+    <action>Continue to step 1</action>
+  </step>
 
   <step n="1" goal="Load story and discover changes">
     <action>Use provided {{story_path}} or ask user which story file to review</action>
@@ -160,6 +180,34 @@
       <action>For each issue: `- [ ] [AI-Review][Severity] Description [file:line]`</action>
       <action>Set {{action_count}} = number of action items created</action>
       <action>Set {{fixed_count}} = 0</action>
+
+      <!-- Azure DevOps Bug creation for HIGH/MEDIUM findings -->
+      <check if="azure_available == true">
+        <action>Extract {{azure_story_id}} from story file metadata</action>
+        <check if="azure_story_id exists">
+          <action>For each HIGH and MEDIUM finding, create Bug work item:</action>
+          <action>Call MCP: create_work_item with:
+{
+  "workItemType": "Bug",
+  "title": "Fix: {{finding_description}}",
+  "description": "<div><p>Found during code review of {{story_key}}</p><p>{{finding_details}}</p></div>",
+  "parentId": {{azure_story_id}},
+  "priority": "{{high:1, medium:2}}[severity]",
+  "severity": "{{high:'2 - High', medium:'3 - Medium'}}[severity]"
+}</action>
+          <action>Store returned Bug work item ID as {{azure_finding_id}}</action>
+
+          <action>Add blocking dependency so story cannot be closed until finding is resolved:</action>
+          <action>Call MCP: manage_work_item_link with:
+{
+  "sourceWorkItemId": {{azure_story_id}},
+  "targetWorkItemId": {{azure_finding_id}},
+  "operation": "add",
+  "relationType": "System.LinkTypes.Dependency-Forward"
+}</action>
+          <output>🔒 Created Azure Bug {{azure_finding_id}} → blocks {{azure_story_id}}</output>
+        </check>
+      </check>
     </check>
 
     <check if="user chooses 3">
@@ -168,7 +216,23 @@
     </check>
   </step>
 
-  <step n="5" goal="Update story status and sync sprint tracking">
+  <step n="5" goal="Update story status, sync Azure, and sync sprint tracking">
+    <!-- Check for blocking Azure findings before marking done -->
+    <check if="azure_available == true">
+      <action>Extract {{azure_story_id}} from story file metadata</action>
+      <check if="azure_story_id exists">
+        <action>Call MCP: list_work_items to check for blocking dependencies on {{azure_story_id}}</action>
+        <check if="open blocking issues exist (unresolved review findings)">
+          <output>🔒 Story has unresolved review findings blocking completion in Azure DevOps</output>
+          <action>Set {{new_status}} = "in-progress"</action>
+          <output>Cannot mark story as done until all blocking Bugs are closed</output>
+        </check>
+        <check if="no blocking issues OR all blockers are closed">
+          <action>Continue with status determination</action>
+        </check>
+      </check>
+    </check>
+
     <!-- Determine new status based on review outcome -->
     <check if="all HIGH and MEDIUM issues fixed AND all ACs implemented">
       <action>Set {{new_status}} = "done"</action>
@@ -179,6 +243,29 @@
       <action>Update story Status field to "in-progress"</action>
     </check>
     <action>Save story file</action>
+
+    <!-- Azure DevOps state update -->
+    <check if="azure_available == true">
+      <action>Extract {{azure_story_id}} from story file metadata</action>
+      <check if="azure_story_id exists">
+        <check if="{{new_status}} == 'done'">
+          <action>Call MCP: update_work_item with:
+{
+  "workItemId": {{azure_story_id}},
+  "state": "Closed"
+}</action>
+          <output>✅ Azure DevOps: Story {{azure_story_id}} closed</output>
+        </check>
+        <check if="{{new_status}} == 'in-progress'">
+          <action>Call MCP: update_work_item with:
+{
+  "workItemId": {{azure_story_id}},
+  "state": "Active"
+}</action>
+          <output>🔄 Azure DevOps: Story {{azure_story_id}} set to Active</output>
+        </check>
+      </check>
+    </check>
 
     <!-- Determine sprint tracking status -->
     <check if="{sprint_status} file exists">

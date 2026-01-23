@@ -66,3 +66,4 @@ _bmad-output
 website/.astro/
 website/dist/
 build/
+.integration_docs/

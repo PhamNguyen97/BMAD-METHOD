@@ -1,0 +1,23 @@
+code: bmad-azure
+name: "BMAD-Azure: Azure DevOps Work Item Tracking"
+header: "Azure DevOps Integration Module"
+subheader: "Integrates Azure DevOps as the source of truth for task tracking, dependencies, and workflows across all BMAD agents."
+description: |
+  This module integrates Azure DevOps work item tracking with BMAD-METHOD.
+  All task discovery, status tracking, and dependency management flows through
+  Azure DevOps via MCP tools, while BMAD maintains its document-driven methodology.
+
+  Features:
+  - Work item hierarchy: Features (Epics) → User Stories → Tasks
+  - State synchronization: Azure ↔ Markdown documents
+  - Dependency tracking via Azure DevOps links
+  - Code review findings as Bug work items
+  - Migration tools for existing BMAD projects
+default_selected: true
+version: 1.0.0
+author: "BMAD-METHOD"
+tags:
+  - azure-devops
+  - task-tracking
+  - integration
+  - mcp

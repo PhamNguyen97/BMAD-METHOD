@@ -12,6 +12,26 @@
   <critical>Do NOT schedule a "next session" or request review pauses unless a HALT condition applies. Only Step 6 decides completion.</critical>
   <critical>User skill level ({user_skill_level}) affects conversation style ONLY, not code updates.</critical>
 
+  <!-- Azure DevOps MCP Preflight Check -->
+  <step n="0" goal="Check Azure DevOps MCP availability">
+    <critical>AZURE DEVOPS MCP CONNECTION IS REQUIRED FOR STORY DEVELOPMENT</critical>
+    <action>Try: Call MCP: list_work_items with wiql="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '<azure-collection>'" and top=1</action>
+    <check if="MCP call succeeds">
+      <action>Set azure_available = true</action>
+      <output>ℹ️ Azure DevOps MCP connected - will sync work item status with Azure</output>
+    </check>
+    <check if="MCP call fails or times out">
+      <output>🚫 Azure DevOps MCP not available</output>
+      <output> Azure DevOps MCP connection is REQUIRED for this workflow.</output>
+      <output> Please verify:</output>
+      <output>   1. MCP server is running (check .mcp.json configuration)</output>
+      <output>   2. PAT token is valid and not expired</output>
+      <output>   3. Network connectivity to Azure DevOps is available</output>
+      <output>   4. Org URL and project settings are correct</output>
+      <action>HALT - Cannot proceed without Azure DevOps MCP connection</action>
+    </check>
+  </step>
+
   <step n="1" goal="Find next ready story and load it" tag="sprint-status">
     <check if="{{story_path}} is provided">
       <action>Use {{story_path}} directly</action>
@@ -188,6 +208,7 @@
   </step>
 
   <step n="4" goal="Mark story in-progress" tag="sprint-status">
+    <!-- File-based sprint status update -->
     <check if="{{sprint_status}} file exists">
       <action>Load the FULL file: {{sprint_status}}</action>
       <action>Read all development_status entries to find {{story_key}}</action>
@@ -218,6 +239,28 @@
     <check if="{{sprint_status}} file does NOT exist">
       <output>ℹ️ No sprint status file exists - story progress will be tracked in story file only</output>
       <action>Set {{current_sprint_status}} = "no-sprint-tracking"</action>
+    </check>
+
+    <!-- Azure DevOps status update -->
+    <check if="azure_available == true">
+      <action>Check story file metadata for azure_story_id</action>
+      <check if="azure_story_id exists in story metadata">
+        <check if="current status == 'ready-for-dev' OR review_continuation == true">
+          <action>Call MCP: update_work_item with:
+{
+  "workItemId": {{azure_story_id}},
+  "state": "Active"
+}</action>
+          <output>🔄 Azure DevOps: Story {{azure_story_id}} updated to "Active"</output>
+        </check>
+        <check if="current status == 'in-progress'">
+          <output>ℹ️ Azure DevOps: Story {{azure_story_id}} already "Active"</output>
+        </check>
+      </check>
+      <check if="azure_story_id does NOT exist in story metadata">
+        <output>⚠️ Azure DevOps: No azure_story_id found in story metadata - skipping Azure update</output>
+        <output>To enable Azure tracking, ensure the story has an azure_story_id in its frontmatter</output>
+      </check>
     </check>
   </step>
 
@@ -361,6 +404,22 @@
 
         Story status is set to "review" in file, but sprint-status.yaml may be out of sync.
       </output>
+    </check>
+
+    <!-- Azure DevOps status update -->
+    <check if="azure_available == true">
+      <action>Check story file metadata for azure_story_id</action>
+      <check if="azure_story_id exists in story metadata">
+        <action>Call MCP: update_work_item with:
+{
+  "workItemId": {{azure_story_id}},
+  "state": "Resolved"
+}</action>
+        <output>✅ Azure DevOps: Story {{azure_story_id}} updated to "Resolved" (ready for review)</output>
+      </check>
+      <check if="azure_story_id does NOT exist in story metadata">
+        <output>⚠️ Azure DevOps: No azure_story_id found - skipping Azure update</output>
+      </check>
     </check>
 
     <!-- Final validation gates -->

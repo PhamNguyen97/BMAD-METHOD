@@ -7,7 +7,7 @@
 
 <workflow>
 
-<step n="0" goal="Determine execution mode">
+<step n="0" goal="Determine execution mode and check Azure DevOps availability">
   <action>Set mode = {{mode}} if provided by caller; otherwise mode = "interactive"</action>
 
   <check if="mode == data">
@@ -19,21 +19,87 @@
   </check>
 
   <check if="mode == interactive">
+    <!-- Azure DevOps MCP Preflight Check -->
+    <critical>AZURE DEVOPS MCP CONNECTION IS REQUIRED FOR SPRINT STATUS</critical>
+    <action>Try: Call MCP: list_work_items with wiql="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '<azure-collection>' AND [System.WorkItemType] = 'User Story'" and top=1</action>
+    <check if="MCP call succeeds">
+      <action>Set azure_available = true</action>
+      <output>ℹ️ Azure DevOps MCP connected - will query Azure for work item status</output>
+    </check>
+    <check if="MCP call fails or times out">
+      <output>🚫 Azure DevOps MCP not available</output>
+      <output>Azure DevOps MCP connection is REQUIRED for this workflow.</output>
+      <output>Please verify:</output>
+      <output>   1. MCP server is running (check .mcp.json configuration)</output>
+      <output>   2. PAT token is valid and not expired</output>
+      <output>   3. Network connectivity to Azure DevOps is available</output>
+      <output>   4. Org URL and project settings are correct</output>
+      <action>HALT - Cannot proceed without Azure DevOps MCP connection</action>
+    </check>
     <action>Continue to Step 1</action>
   </check>
 </step>
 
-<step n="1" goal="Locate sprint status file">
-  <action>Try {sprint_status_file}</action>
-  <check if="file not found">
-    <output>❌ sprint-status.yaml not found.
-Run `/bmad:bmm:workflows:sprint-planning` to generate it, then rerun sprint-status.</output>
-    <action>Exit workflow</action>
+<step n="1" goal="Locate sprint status file or query Azure DevOps">
+  <check if="azure_available == true">
+    <action>Query Azure DevOps for current sprint status</action>
+    <action>Call MCP: list_work_items with wiql="
+SELECT [System.Id], [System.Title], [System.State], [System.WorkItemType]
+FROM WorkItems
+WHERE [System.TeamProject] = '<azure-collection>'
+AND [System.WorkItemType] IN ('Feature', 'User Story', 'Task')
+ORDER BY [System.WorkItemType], [System.Id]
+"</action>
+    <action>Parse results:</action>
+    - Map Azure states to BMAD stages: New→backlog, Active→in-progress, Resolved→review, Closed→done
+    - Count Features (Epics): by state (backlog/New, in-progress/Active, done/Closed)
+    - Count User Stories: by state
+    - Count Tasks: by state
+    <action>Set azure_data = parsed results</action>
+    <action>Jump to Step 2.5</action>
   </check>
-  <action>Continue to Step 2</action>
+
+  <check if="azure_available == false">
+    <action>Use file-based tracking (fallback mode)</action>
+    <action>Try {sprint_status_file}</action>
+    <check if="file not found">
+      <output>❌ sprint-status.yaml not found and Azure DevOps unavailable.
+Run `/bmad:bmm:workflows:sprint-planning` to generate it, then rerun sprint-status.</output>
+      <action>Exit workflow</action>
+    </check>
+    <action>Continue to Step 2</action>
+  </check>
 </step>
 
-<step n="2" goal="Read and parse sprint-status.yaml">
+<!-- Azure-based status parsing (Step 2.5) -->
+<step n="2.5" goal="Parse Azure DevOps data">
+  <action>Parse Azure work item data:</action>
+  <action>For Features (epics):</action>
+  - Filter by workItemType = 'Feature'
+  - Map state: New→backlog, Active→in-progress, Closed→done
+  - Count epic statuses: backlog, in-progress, done
+
+  <action>For User Stories:</action>
+  - Filter by workItemType = 'User Story'
+  - Map state: New→backlog, Active→in-progress, Resolved→review, Closed→done
+  - Count story statuses: backlog, ready-for-dev, in-progress, review, done
+  - Note: Stories with state='New' and tag='Ready' are 'ready-for-dev'
+
+  <action>For Tasks:</action>
+  - Filter by workItemType = 'Task'
+  - Map state similarly to stories
+  - Count task statuses
+
+  <action>Detect risks from Azure data:</action>
+  - IF any User Story has state == 'Resolved': suggest `/bmad:bmm:workflows:code-review`
+  - IF any User Story has state == 'Active' AND no stories have state 'New': recommend staying focused on active story
+  - IF all Features have state 'New' AND no User Stories have state 'New': prompt `/bmad:bmm:workflows:create-story`
+  - IF any Feature has state 'Active' but has no child User Stories: warn "active feature has no stories"
+
+  <action>Continue to Step 3 (select next action)</action>
+</step>
+
+<step n="2" goal="Read and parse sprint-status.yaml (file-based fallback)">
   <action>Read the FULL file: {sprint_status_file}</action>
   <action>Parse fields: generated, project, project_key, tracking_system, story_location</action>
   <action>Parse development_status map. Classify keys:</action>

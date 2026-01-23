@@ -2,6 +2,28 @@
   <critical>The workflow execution engine is governed by: {project-root}/_bmad/core/tasks/workflow.xml</critical>
   <critical>You MUST have already loaded and processed: {installed_path}/workflow.yaml</critical>
   <critical>Communicate all responses in {communication_language} and generate all documents in {document_output_language}</critical>
+  <critical>🔧 AZURE DEVOPS INTEGRATION - Stories created will generate User Story work items in Azure DevOps when MCP is available</critical>
+
+  <!-- Azure DevOps MCP Preflight Check -->
+  <step n="0" goal="Check Azure DevOps MCP availability">
+    <critical>AZURE DEVOPS MCP CONNECTION IS REQUIRED FOR STORY CREATION</critical>
+    <action>Try: Call MCP: list_work_items with wiql="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '<azure-collection>'" and top=1</action>
+    <check if="MCP call succeeds">
+      <action>Set azure_available = true</action>
+      <output>ℹ️ Azure DevOps MCP connected - will create User Story work items in Azure</output>
+    </check>
+    <check if="MCP call fails or times out">
+      <output>🚫 Azure DevOps MCP not available</output>
+      <output>Azure DevOps MCP connection is REQUIRED for this workflow.</output>
+      <output>Please verify:</output>
+      <output>   1. MCP server is running (check .mcp.json configuration)</output>
+      <output>   2. PAT token is valid and not expired</output>
+      <output>   3. Network connectivity to Azure DevOps is available</output>
+      <output>   4. Org URL and project settings are correct</output>
+      <action>HALT - Cannot proceed without Azure DevOps MCP connection</action>
+    </check>
+    <action>Continue to step 1</action>
+  </step>
 
   <critical>🔥 CRITICAL MISSION: You are creating the ULTIMATE story context engine that prevents LLM developer mistakes, omissions or
     disasters! 🔥</critical>
@@ -309,7 +331,7 @@
     context engine analysis completed - comprehensive developer guide created"</action>
   </step>
 
-  <step n="6" goal="Update sprint status and finalize">
+  <step n="6" goal="Update sprint status, create Azure work item, and finalize">
     <invoke-task>Validate against checklist at {installed_path}/checklist.md using _bmad/core/tasks/validate-workflow.xml</invoke-task>
     <action>Save story document unconditionally</action>
 
@@ -323,6 +345,40 @@
       <action>Save file, preserving ALL comments and structure including STATUS DEFINITIONS</action>
     </check>
 
+    <!-- Azure DevOps User Story creation -->
+    <check if="azure_available == true">
+      <action>Create User Story work item in Azure DevOps:</action>
+      <action>Call MCP: create_work_item with:
+{
+  "workItemType": "User Story",
+  "title": "{{story_title}}",
+  "description": "<div><p>{{story_summary}}</p></div>",
+  "parentId": {{azure_feature_id}},
+  "priority": 2,
+  "areaPath": "<azure-collection>\\<azure-team>"
+}</action>
+      <action>Store returned work item ID as {{azure_story_id}}</action>
+
+      <!-- Add Azure ID to story file metadata -->
+      <action>Read the story file frontmatter</action>
+      <check if="story file has YAML frontmatter">
+        <action>Add to frontmatter: azure_story_id: {{azure_story_id}}</action>
+        <check if="azure_feature_id exists">
+          <action>Ensure azure_feature_id: {{azure_feature_id}} is in frontmatter</action>
+        </check>
+      </check>
+      <check if="story file does NOT have YAML frontmatter">
+        <action>Add YAML frontmatter to story file:
+---
+azure_story_id: {{azure_story_id}}
+azure_feature_id: {{azure_feature_id}}
+---</action>
+      </check>
+
+      <action>Save story file with Azure metadata</action>
+      <output>✅ Azure DevOps: Created User Story {{azure_story_id}} for {{story_key}}</output>
+    </check>
+
     <action>Report completion</action>
     <output>**🎯 ULTIMATE BMad Method STORY CONTEXT CREATED, {user_name}!**
 
@@ -331,6 +387,9 @@
       - Story Key: {{story_key}}
       - File: {{story_file}}
       - Status: ready-for-dev
+      <check if="azure_available == true and azure_story_id is set">
+      - Azure User Story ID: {{azure_story_id}}
+      </check>
 
       **Next Steps:**
       1. Review the comprehensive story in {{story_file}}
