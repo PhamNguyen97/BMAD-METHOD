@@ -1,8 +1,8 @@
 # Azure DevOps Integration Conventions
 
-**Module**: bmad-azure
+**Module**: bmm
 **Purpose**: Canonical conventions for integrating Azure DevOps work items with BMAD
-**Version**: 1.0.0
+**Version**: 6.0.0
 
 ---
 
@@ -481,14 +481,14 @@ node tools/azure/migrate-bmad-to-azure.js --verbose
 - Preserves existing Azure IDs (for incremental migration)
 - Marks completed items as "Closed"
 
-### reconcile-bmad-azure.js
+### reconcile-azure.js
 
 ```bash
 # Check for discrepancies
-node tools/azure/reconcile-bmad-azure.js --verbose
+node tools/azure/reconcile-azure.js --verbose
 
 # Auto-fix discrepancies
-node tools/azure/reconcile-bmad-azure.js --fix --verbose
+node tools/azure/reconcile-azure.js --fix --verbose
 ```
 
 **Checks performed:**
@@ -508,7 +508,7 @@ After implementing Azure DevOps integration, verify:
 
 - [ ] MCP server is configured in `.mcp.json`
 - [ ] `azure-conventions.md` is installed to `_bmad/bmm/data/`
-- [ ] `bmad-azure` module appears in module selection
+- [ ] `bmm` module is installed with Azure configuration
 - [ ] `list_work_items` MCP call returns work items
 - [ ] `create_work_item` creates items visible in Azure portal
 - [ ] `update_work_item` changes are visible in Azure portal

@@ -24,9 +24,10 @@ variables:
   # Project identification
   project_name: "{config_source}:project_name"
 
-  # Azure DevOps configuration (from bmad-azure module)
-  azure_collection: "{config_source}:azure_collection"
+  # Azure DevOps configuration
+  # Azure-specific project identifier (separate from general project_name)
   azure_team: "{config_source}:azure_team"
+  azure_project_id: "{config_source}:azure_project_id"
 
   # Tracking system configuration
   tracking_system: "file-system" # Options: file-system, Future will support other options from config of mcp such as jira, linear, trello

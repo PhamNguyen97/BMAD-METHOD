@@ -26,7 +26,7 @@
 <!-- Azure DevOps MCP Preflight Check -->
 <step n="0" goal="Check Azure DevOps MCP availability">
   <critical>AZURE DEVOPS MCP CONNECTION IS REQUIRED FOR SPRINT PLANNING</critical>
-  <action>Try: Call MCP: list_work_items with wiql="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '{azure_collection}'" and top=1</action>
+  <action>Try: Call MCP: list_work_items with wiql="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '{azure_project_id}'" and top=1</action>
   <check if="MCP call succeeds">
     <action>Set azure_available = true</action>
     <output>ℹ️ Azure DevOps MCP connected - will create Feature work items for epics</output>
@@ -89,12 +89,12 @@
 }</action>
 
     <check if="iteration creation succeeds">
-      <action>Set {{iteration_path}} = "{azure_collection}\\{azure_team}\\Sprint {{sprint_number}}"</action>
+      <action>Set {{iteration_path}} = "{azure_project_id}\\{azure_team}\\Sprint {{sprint_number}}"</action>
       <output>✅ Azure DevOps: Created iteration "{{iteration_path}}" ({{start_date}} to {{finish_date}})</output>
     </check>
 
     <check if="iteration fails with error containing 'already exists' or 'conflict'">
-      <action>Set {{iteration_path}} = "{azure_collection}\\{azure_team}\\Sprint {{sprint_number}}"</action>
+      <action>Set {{iteration_path}} = "{azure_project_id}\\{azure_team}\\Sprint {{sprint_number}}"</action>
       <output>ℹ️ Azure DevOps: Iteration "{{iteration_path}}" already exists, reusing it</output>
     </check>
 
@@ -107,6 +107,7 @@
 
   <check if="azure_available == false OR auto_create_iterations == false">
     <action>Set {{iteration_path}} = null</action>
+    <action>Set {{sprint_number}} = 1</action>
     <output>ℹ️ Skipping iteration creation (Azure unavailable or disabled in config)</output>
   </check>
 
@@ -244,7 +245,7 @@ development_status:
   "title": "Epic {{epic_num}}: {{epic_title}}",
   "description": "<div><p>Epic {{epic_num}} from {project_name}</p></div>",
   "state": "New",
-  "areaPath": "{azure_collection}\\{azure_team}"
+  "areaPath": "{azure_project_id}\\{azure_team}"
 }</action>
 
   <check if="{{iteration_path}} is not null">
@@ -254,8 +255,9 @@ development_status:
   <action>Call MCP: create_work_item with: base_params</action>
   <action>Store returned Feature ID as {{azure_feature_id_{{epic_num}}}</action>
   <output>✅ Azure DevOps: Created Feature {{azure_feature_id_{{epic_num}}} for Epic {{epic_num}}</output>
+  <output>   └─ Area: {azure_project_id}\\{azure_team}</output>
   <check if="{{iteration_path}} is not null">
-    <output>   └─ Assigned to: {{iteration_path}}</output>
+    <output>   └─ Iteration: {{iteration_path}}</output>
   </check>
 </check>
 </step>

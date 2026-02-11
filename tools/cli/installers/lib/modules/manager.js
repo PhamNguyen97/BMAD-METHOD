@@ -57,13 +57,48 @@ class ModuleManager {
   }
 
   /**
-   * Copy a file to the target location
+   * Copy a file to the target location with placeholder replacement
    * @param {string} sourcePath - Source file path
    * @param {string} targetPath - Target file path
    * @param {boolean} overwrite - Whether to overwrite existing files (default: true)
+   * @param {Object} moduleConfig - Module configuration for placeholder replacement (optional)
    */
-  async copyFileWithPlaceholderReplacement(sourcePath, targetPath, overwrite = true) {
-    await fs.copy(sourcePath, targetPath, { overwrite });
+  async copyFileWithPlaceholderReplacement(sourcePath, targetPath, overwrite = true, moduleConfig = null) {
+    // List of text file extensions that should have placeholder replacement
+    const textExtensions = ['.md', '.yaml', '.yml', '.txt', '.json', '.js', '.ts', '.html', '.css', '.sh', '.bat', '.csv', '.xml'];
+    const ext = path.extname(sourcePath).toLowerCase();
+
+    // Check if this is a text file that might contain placeholders
+    if (textExtensions.includes(ext)) {
+      try {
+        // Read the file content
+        let content = await fs.readFile(sourcePath, 'utf8');
+
+        // Replace _bmad placeholder with actual folder name
+        content = content.replaceAll('_bmad', this.bmadFolderName);
+
+        // Replace module-specific placeholders if config provided
+        if (moduleConfig) {
+          // Azure DevOps placeholders
+          if (moduleConfig.azure_collection) {
+            content = content.replaceAll('{azure_collection}', moduleConfig.azure_collection);
+          }
+          if (moduleConfig.azure_team) {
+            content = content.replaceAll('{azure_team}', moduleConfig.azure_team);
+          }
+        }
+
+        // Write to target with replaced content
+        await fs.ensureDir(path.dirname(targetPath));
+        await fs.writeFile(targetPath, content, 'utf8');
+      } catch {
+        // If reading as text fails, fall back to regular copy
+        await fs.copy(sourcePath, targetPath, { overwrite });
+      }
+    } else {
+      // Binary file or other file type - just copy directly
+      await fs.copy(sourcePath, targetPath, { overwrite });
+    }
   }
 
   /**
@@ -729,10 +764,10 @@ class ModuleManager {
       // Check if this is a workflow.yaml file
       if (file.endsWith('workflow.yaml')) {
         await fs.ensureDir(path.dirname(targetFile));
-        await this.copyWorkflowYamlStripped(sourceFile, targetFile);
+        await this.copyWorkflowYamlStripped(sourceFile, targetFile, moduleConfig);
       } else {
-        // Copy the file with placeholder replacement
-        await this.copyFileWithPlaceholderReplacement(sourceFile, targetFile);
+        // Copy the file with placeholder replacement (pass module config for Azure placeholders)
+        await this.copyFileWithPlaceholderReplacement(sourceFile, targetFile, true, moduleConfig);
       }
 
       // Track the file if callback provided
@@ -747,8 +782,9 @@ class ModuleManager {
    * Preserves comments, formatting, and line breaks
    * @param {string} sourceFile - Source workflow.yaml file path
    * @param {string} targetFile - Target workflow.yaml file path
+   * @param {Object} moduleConfig - Module configuration for placeholder replacement (optional)
    */
-  async copyWorkflowYamlStripped(sourceFile, targetFile) {
+  async copyWorkflowYamlStripped(sourceFile, targetFile, moduleConfig = null) {
     // Read the source YAML file
     let yamlContent = await fs.readFile(sourceFile, 'utf8');
 
@@ -756,6 +792,17 @@ class ModuleManager {
     // Otherwise parsing will fail on the placeholder
     yamlContent = yamlContent.replaceAll('_bmad', '_bmad');
     yamlContent = yamlContent.replaceAll('_bmad', this.bmadFolderName);
+
+    // Replace module-specific placeholders if config provided
+    if (moduleConfig) {
+      // Azure DevOps placeholders
+      if (moduleConfig.azure_collection) {
+        yamlContent = yamlContent.replaceAll('{azure_collection}', moduleConfig.azure_collection);
+      }
+      if (moduleConfig.azure_team) {
+        yamlContent = yamlContent.replaceAll('{azure_team}', moduleConfig.azure_team);
+      }
+    }
 
     try {
       // First check if web_bundle exists by parsing

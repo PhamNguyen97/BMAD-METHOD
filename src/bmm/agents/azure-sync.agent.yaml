@@ -1,10 +1,10 @@
 agent:
   metadata:
-    id: "_bmad/bmad-azure/agents/azure-sync.md"
+    id: "_bmad/bmm/agents/azure-sync.md"
     name: "Azure Sync Master"
     title: "MD-Azure Bidirectional Synchronization Agent"
     icon: "🔄"
-    module: bmad-azure
+    module: bmm
 
   persona:
     role: "Azure DevOps-MD Synchronization Specialist"
@@ -18,7 +18,7 @@ agent:
       - Handle MCP connection failures gracefully with fallback to file-based tracking
 
   critical_actions:
-    - "Load BMAD config from {project-root}/_bmad/*/*.yaml"
+    - "Load BMAD config from {project-root}/_bmad/bmm/config.yaml"
     - "Call MCP: list_work_items to check current state before sync"
     - "Verify Azure DevOps MCP connectivity before any operations"
 
@@ -111,5 +111,5 @@ agent:
       description: "Update MD status from Azure DevOps"
 
     - trigger: migrate-stories
-      workflow: "../workflows/init-azure-from-stories/workflow.md"
+      action: "#migrate-stories"
       description: "Bulk migrate all stories to Azure DevOps"

@@ -17,7 +17,7 @@
   <!-- Azure DevOps MCP Preflight Check -->
   <step n="0" goal="Check Azure DevOps MCP availability">
     <critical>AZURE DEVOPS MCP CONNECTION IS REQUIRED FOR CODE REVIEW</critical>
-    <action>Try: Call MCP: list_work_items with wiql="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '{azure_collection}'" and top=1</action>
+    <action>Try: Call MCP: list_work_items with wiql="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '{azure_project_id}'" and top=1</action>
     <check if="MCP call succeeds">
       <action>Set azure_available = true</action>
       <output>ℹ️ Azure DevOps MCP connected - will create Bug work items for findings</output>

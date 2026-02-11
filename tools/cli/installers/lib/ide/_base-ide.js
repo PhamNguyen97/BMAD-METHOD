@@ -487,9 +487,10 @@ class BaseIdeSetup {
    * @param {string} content - File content
    * @param {Object} metadata - File metadata
    * @param {string} projectDir - The actual project directory path
+   * @param {Object} moduleConfig - Module configuration values (optional)
    * @returns {string} Processed content
    */
-  processContent(content, metadata = {}, projectDir = null) {
+  processContent(content, metadata = {}, projectDir = null, moduleConfig = null) {
     // Replace placeholders
     let processed = content;
 
@@ -508,7 +509,52 @@ class BaseIdeSetup {
     processed = processed.replaceAll('{agent}', metadata.name || '');
     processed = processed.replaceAll('{task}', metadata.name || '');
 
+    // Replace module-specific placeholders if config provided
+    if (moduleConfig) {
+      // Azure DevOps placeholders
+      if (moduleConfig.azure_collection) {
+        processed = processed.replaceAll('{azure_collection}', moduleConfig.azure_collection);
+        processed = processed.replaceAll('{azure_project_id}', moduleConfig.azure_collection);
+      }
+      if (moduleConfig.azure_team) {
+        processed = processed.replaceAll('{azure_team}', moduleConfig.azure_team);
+      }
+      // Add more module-specific placeholders as needed
+    }
+
     return processed;
+  }
+
+  /**
+   * Load Azure DevOps module configuration
+   * Azure config is now part of bmm module
+   * @param {string} bmadDir - BMAD installation directory
+   * @returns {Object|null} Module configuration or null
+   */
+  async loadAzureModuleConfig(bmadDir) {
+    const yaml = require('yaml');
+
+    // Azure config is now in bmm module (bmad-azure was merged into bmm)
+    const configPath = path.join(bmadDir, 'bmm', 'module.yaml');
+
+    if (!(await fs.pathExists(configPath))) {
+      return null;
+    }
+
+    try {
+      const content = await fs.readFile(configPath, 'utf8');
+      const config = yaml.parse(content);
+      // Extract only Azure-related config values
+      if (config) {
+        return {
+          azure_collection: config.azure_project_id || config.project_name,
+          azure_team: config.azure_team || config.project_name,
+        };
+      }
+      return null;
+    } catch {
+      return null;
+    }
   }
 
   /**
