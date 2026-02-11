@@ -26,7 +26,7 @@
 <!-- Azure DevOps MCP Preflight Check -->
 <step n="0" goal="Check Azure DevOps MCP availability">
   <critical>AZURE DEVOPS MCP CONNECTION IS REQUIRED FOR SPRINT PLANNING</critical>
-  <action>Try: Call MCP: list_work_items with wiql="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '<azure-collection>'" and top=1</action>
+  <action>Try: Call MCP: list_work_items with wiql="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '{azure_collection}'" and top=1</action>
   <check if="MCP call succeeds">
     <action>Set azure_available = true</action>
     <output>ℹ️ Azure DevOps MCP connected - will create Feature work items for epics</output>
@@ -42,6 +42,75 @@
     <action>HALT - Cannot proceed without Azure DevOps MCP connection</action>
   </check>
   <action>Continue to step 1</action>
+</step>
+
+<!-- Azure DevOps Iteration Creation -->
+<step n="0.5" goal="Create or verify sprint iteration in Azure DevOps">
+  <check if="azure_available == true AND auto_create_iterations == true">
+    <critical>🔧 AZURE DEVOPS ITERATION CREATION - Creates sprint iteration before Features</critical>
+
+    <!-- Sprint number detection: Azure first, then sprint-status.yaml fallback -->
+    <action>Determine current sprint number:</action>
+    <action>Query Azure DevOps for existing iterations to determine next sprint number</action>
+    <action>Parse iteration names to find highest "Sprint N" pattern (e.g., "Sprint 1", "Sprint 2")</action>
+
+    <check if="Azure returns iterations with Sprint pattern">
+      <action>Extract highest sprint number from iteration names</action>
+      <action>Set {{sprint_number}} = highest_sprint_number + 1</action>
+      <output>ℹ️ Azure DevOps: Found existing sprints, starting Sprint {{sprint_number}}</output>
+    </check>
+
+    <check if="Azure returns no iterations or no Sprint pattern">
+      <action>Check if {status_file} exists and contains current_sprint_number</action>
+      <check if="status_file exists with current_sprint_number">
+        <action>Set {{sprint_number}} = current_sprint_number from status_file</action>
+      </check>
+      <check if="status_file does NOT exist or missing current_sprint_number">
+        <action>Set {{sprint_number}} = 1 (first sprint)</action>
+      </check>
+      <output>ℹ️ No existing sprints found, starting Sprint {{sprint_number}}</output>
+    </check>
+
+    <!-- Date calculation -->
+    <action>Calculate sprint dates:</action>
+    <action>Set {{start_date}} = sprint_start_date from config OR current date in ISO 8601 format</action>
+    <action>Calculate {{finish_date}} = start_date + sprint_duration_days (format as ISO 8601)</action>
+    <action>Example: If start_date = 2026-01-29 and sprint_duration_days = 14, then finish_date = 2026-02-12</action>
+
+    <!-- Iteration creation -->
+    <action>Create iteration in Azure DevOps:</action>
+    <action>Call MCP: create_iteration with:
+{
+  "teamName": "{azure_team}",
+  "name": "Sprint {{sprint_number}}",
+  "startDate": "{{start_date}}",
+  "finishDate": "{{finish_date}}",
+  "description": "Sprint {{sprint_number}} for {project_name}"
+}</action>
+
+    <check if="iteration creation succeeds">
+      <action>Set {{iteration_path}} = "{azure_collection}\\{azure_team}\\Sprint {{sprint_number}}"</action>
+      <output>✅ Azure DevOps: Created iteration "{{iteration_path}}" ({{start_date}} to {{finish_date}})</output>
+    </check>
+
+    <check if="iteration fails with error containing 'already exists' or 'conflict'">
+      <action>Set {{iteration_path}} = "{azure_collection}\\{azure_team}\\Sprint {{sprint_number}}"</action>
+      <output>ℹ️ Azure DevOps: Iteration "{{iteration_path}}" already exists, reusing it</output>
+    </check>
+
+    <check if="iteration fails with other error">
+      <output>⚠️ Azure DevOps: Could not create iteration (error: {{error_message}})</output>
+      <output>Work items will be created without iteration path assignment</output>
+      <action>Set {{iteration_path}} = null</action>
+    </check>
+  </check>
+
+  <check if="azure_available == false OR auto_create_iterations == false">
+    <action>Set {{iteration_path}} = null</action>
+    <output>ℹ️ Skipping iteration creation (Azure unavailable or disabled in config)</output>
+  </check>
+
+  <action>Continue to Step 1</action>
 </step>
 
 <step n="1" goal="Parse epic files and extract all work items">
@@ -155,6 +224,8 @@ project: { project_name }
 project_key: { project_key }
 tracking_system: { tracking_system }
 story_location: { story_location }
+current_sprint_number: {{sprint_number}}
+current_iteration_path: {{iteration_path}}
 
 development_status:
   # All epics, stories, and retrospectives in order
@@ -167,15 +238,25 @@ development_status:
 <!-- Azure DevOps Feature creation for each epic -->
 <check if="azure_available == true">
   <action>For each epic found in Step 1, create or find Azure Feature work item:</action>
-  <action>Call MCP: create_work_item with:
-{
+  <action>Build create_work_item parameters:</action>
+  <action>Set base_params = {
   "workItemType": "Feature",
   "title": "Epic {{epic_num}}: {{epic_title}}",
   "description": "<div><p>Epic {{epic_num}} from {project_name}</p></div>",
-  "state": "New"
+  "state": "New",
+  "areaPath": "{azure_collection}\\{azure_team}"
 }</action>
+
+  <check if="{{iteration_path}} is not null">
+    <action>Add "iterationPath": "{{iteration_path}}" to base_params</action>
+  </check>
+
+  <action>Call MCP: create_work_item with: base_params</action>
   <action>Store returned Feature ID as {{azure_feature_id_{{epic_num}}}</action>
   <output>✅ Azure DevOps: Created Feature {{azure_feature_id_{{epic_num}}} for Epic {{epic_num}}</output>
+  <check if="{{iteration_path}} is not null">
+    <output>   └─ Assigned to: {{iteration_path}}</output>
+  </check>
 </check>
 </step>
 

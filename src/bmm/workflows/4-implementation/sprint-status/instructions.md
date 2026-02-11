@@ -21,7 +21,7 @@
   <check if="mode == interactive">
     <!-- Azure DevOps MCP Preflight Check -->
     <critical>AZURE DEVOPS MCP CONNECTION IS REQUIRED FOR SPRINT STATUS</critical>
-    <action>Try: Call MCP: list_work_items with wiql="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '<azure-collection>' AND [System.WorkItemType] = 'User Story'" and top=1</action>
+    <action>Try: Call MCP: list_work_items with wiql="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '{azure_collection}' AND [System.WorkItemType] = 'User Story'" and top=1</action>
     <check if="MCP call succeeds">
       <action>Set azure_available = true</action>
       <output>ℹ️ Azure DevOps MCP connected - will query Azure for work item status</output>
@@ -46,7 +46,7 @@
     <action>Call MCP: list_work_items with wiql="
 SELECT [System.Id], [System.Title], [System.State], [System.WorkItemType]
 FROM WorkItems
-WHERE [System.TeamProject] = '<azure-collection>'
+WHERE [System.TeamProject] = '{azure_collection}'
 AND [System.WorkItemType] IN ('Feature', 'User Story', 'Task')
 ORDER BY [System.WorkItemType], [System.Id]
 "</action>

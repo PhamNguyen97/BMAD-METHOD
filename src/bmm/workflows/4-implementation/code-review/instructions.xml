@@ -17,7 +17,7 @@
   <!-- Azure DevOps MCP Preflight Check -->
   <step n="0" goal="Check Azure DevOps MCP availability">
     <critical>AZURE DEVOPS MCP CONNECTION IS REQUIRED FOR CODE REVIEW</critical>
-    <action>Try: Call MCP: list_work_items with wiql="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '<azure-collection>'" and top=1</action>
+    <action>Try: Call MCP: list_work_items with wiql="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '{azure_collection}'" and top=1</action>
     <check if="MCP call succeeds">
       <action>Set azure_available = true</action>
       <output>ℹ️ Azure DevOps MCP connected - will create Bug work items for findings</output>
@@ -184,28 +184,39 @@
       <!-- Azure DevOps Bug creation for HIGH/MEDIUM findings -->
       <check if="azure_available == true">
         <action>Extract {{azure_story_id}} from story file metadata</action>
+        <action>Extract {{azure_iteration_path}} from story file frontmatter if present (may be null)</action>
         <check if="azure_story_id exists">
           <action>For each HIGH and MEDIUM finding, create Bug work item:</action>
-          <action>Call MCP: create_work_item with:
-{
+          <action>Build create_work_item parameters:</action>
+          <action>Set base_params = {
   "workItemType": "Bug",
   "title": "Fix: {{finding_description}}",
   "description": "<div><p>Found during code review of {{story_key}}</p><p>{{finding_details}}</p></div>",
   "parentId": {{azure_story_id}},
   "priority": "{{high:1, medium:2}}[severity]",
-  "severity": "{{high:'2 - High', medium:'3 - Medium'}}[severity]"
+  "severity": "{{high:'2 - High', medium:'3 - Medium'}}[severity]",
+  "areaPath": "{azure_collection}\\{azure_team}"
 }</action>
+
+          <check if="{{azure_iteration_path}} is not null">
+            <action>Add "iterationPath": "{{azure_iteration_path}}" to base_params</action>
+          </check>
+
+          <action>Call MCP: create_work_item with: base_params</action>
           <action>Store returned Bug work item ID as {{azure_finding_id}}</action>
 
           <action>Add blocking dependency so story cannot be closed until finding is resolved:</action>
           <action>Call MCP: manage_work_item_link with:
 {
-  "sourceWorkItemId": {{azure_story_id}},
-  "targetWorkItemId": {{azure_finding_id}},
+  "sourceWorkItemId": {{azure_story_id}},  <!-- Story (Successor - blocked by bug) -->
+  "targetWorkItemId": {{azure_finding_id}},  <!-- Bug (Predecessor - must fix first) -->
   "operation": "add",
   "relationType": "System.LinkTypes.Dependency-Forward"
 }</action>
-          <output>🔒 Created Azure Bug {{azure_finding_id}} → blocks {{azure_story_id}}</output>
+          <output>🔒 Created Azure Bug {{azure_finding_id}} (Predecessor) → blocks Story {{azure_story_id}} (Successor)</output>
+          <check if="{{azure_iteration_path}} is not null">
+            <output>   └─ Assigned to: {{azure_iteration_path}}</output>
+          </check>
         </check>
       </check>
     </check>
@@ -252,17 +263,23 @@
           <action>Call MCP: update_work_item with:
 {
   "workItemId": {{azure_story_id}},
-  "state": "Closed"
+  "state": "Closed",
+  "additionalFields": {
+    "Microsoft.VSTS.Scheduling.TargetDate": "{{current_date}}"
+  }
 }</action>
-          <output>✅ Azure DevOps: Story {{azure_story_id}} closed</output>
+          <output>✅ Azure DevOps: Story {{azure_story_id}} closed with Target Date</output>
         </check>
         <check if="{{new_status}} == 'in-progress'">
           <action>Call MCP: update_work_item with:
 {
   "workItemId": {{azure_story_id}},
-  "state": "Active"
+  "state": "Active",
+  "additionalFields": {
+    "Microsoft.VSTS.Scheduling.StartDate": "{{current_date}}"
+  }
 }</action>
-          <output>🔄 Azure DevOps: Story {{azure_story_id}} set to Active</output>
+          <output>🔄 Azure DevOps: Story {{azure_story_id}} set to Active with Start Date</output>
         </check>
       </check>
     </check>

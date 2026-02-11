@@ -24,6 +24,10 @@ variables:
   # Project identification
   project_name: "{config_source}:project_name"
 
+  # Azure DevOps configuration (from bmad-azure module)
+  azure_collection: "{config_source}:azure_collection"
+  azure_team: "{config_source}:azure_team"
+
   # Tracking system configuration
   tracking_system: "file-system" # Options: file-system, Future will support other options from config of mcp such as jira, linear, trello
   story_location: "{config_source}:implementation_artifacts" # Relative path for file-system, Future will support URL for Jira/Linear/Trello
@@ -35,6 +39,12 @@ variables:
 
   # Output configuration
   status_file: "{implementation_artifacts}/sprint-status.yaml"
+
+  # Azure DevOps iteration configuration
+  sprint_duration_days: 14 # Default sprint length in days (2 weeks)
+  sprint_start_date: null # Override first sprint start date (ISO 8601 format)
+  auto_create_iterations: true # Whether to automatically create iterations in Azure DevOps
+  current_sprint_number: null # Fallback: auto-detected from Azure or sprint-status
 
 # Smart input file references - handles both whole docs and sharded docs
 # Priority: Whole document first, then sharded version

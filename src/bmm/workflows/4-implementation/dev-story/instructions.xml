@@ -15,7 +15,7 @@
   <!-- Azure DevOps MCP Preflight Check -->
   <step n="0" goal="Check Azure DevOps MCP availability">
     <critical>AZURE DEVOPS MCP CONNECTION IS REQUIRED FOR STORY DEVELOPMENT</critical>
-    <action>Try: Call MCP: list_work_items with wiql="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '<azure-collection>'" and top=1</action>
+    <action>Try: Call MCP: list_work_items with wiql="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '{azure_collection}'" and top=1</action>
     <check if="MCP call succeeds">
       <action>Set azure_available = true</action>
       <output>ℹ️ Azure DevOps MCP connected - will sync work item status with Azure</output>
@@ -249,9 +249,12 @@
           <action>Call MCP: update_work_item with:
 {
   "workItemId": {{azure_story_id}},
-  "state": "Active"
+  "state": "Active",
+  "additionalFields": {
+    "Microsoft.VSTS.Scheduling.StartDate": "{{current_date}}"
+  }
 }</action>
-          <output>🔄 Azure DevOps: Story {{azure_story_id}} updated to "Active"</output>
+          <output>🔄 Azure DevOps: Story {{azure_story_id}} updated to "Active" with Start Date</output>
         </check>
         <check if="current status == 'in-progress'">
           <output>ℹ️ Azure DevOps: Story {{azure_story_id}} already "Active"</output>
@@ -413,9 +416,12 @@
         <action>Call MCP: update_work_item with:
 {
   "workItemId": {{azure_story_id}},
-  "state": "Resolved"
+  "state": "Resolved",
+  "additionalFields": {
+    "Microsoft.VSTS.Scheduling.TargetDate": "{{current_date}}"
+  }
 }</action>
-        <output>✅ Azure DevOps: Story {{azure_story_id}} updated to "Resolved" (ready for review)</output>
+        <output>✅ Azure DevOps: Story {{azure_story_id}} updated to "Resolved" with Target Date</output>
       </check>
       <check if="azure_story_id does NOT exist in story metadata">
         <output>⚠️ Azure DevOps: No azure_story_id found - skipping Azure update</output>

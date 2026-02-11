@@ -7,7 +7,7 @@
   <!-- Azure DevOps MCP Preflight Check -->
   <step n="0" goal="Check Azure DevOps MCP availability">
     <critical>AZURE DEVOPS MCP CONNECTION IS REQUIRED FOR STORY CREATION</critical>
-    <action>Try: Call MCP: list_work_items with wiql="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '<azure-collection>'" and top=1</action>
+    <action>Try: Call MCP: list_work_items with wiql="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '{azure_collection}'" and top=1</action>
     <check if="MCP call succeeds">
       <action>Set azure_available = true</action>
       <output>ℹ️ Azure DevOps MCP connected - will create User Story work items in Azure</output>
@@ -347,16 +347,29 @@
 
     <!-- Azure DevOps User Story creation -->
     <check if="azure_available == true">
+      <action>Load sprint status to determine iteration path:</action>
+      <action>Read {{sprint_status}} file to extract current_iteration_path value (may be null)</action>
+      <action>Set {{story_iteration_path}} = current_iteration_path from sprint status (null if not present)</action>
+
       <action>Create User Story work item in Azure DevOps:</action>
-      <action>Call MCP: create_work_item with:
-{
+      <action>Build create_work_item parameters:</action>
+      <action>Set base_params = {
   "workItemType": "User Story",
   "title": "{{story_title}}",
   "description": "<div><p>{{story_summary}}</p></div>",
   "parentId": {{azure_feature_id}},
   "priority": 2,
-  "areaPath": "<azure-collection>\\<azure-team>"
+  "areaPath": "{azure_collection}\\{azure_team}",
+  "additionalFields": {
+    "Microsoft.VSTS.Scheduling.TargetDate": "{{target_date}}"
+  }
 }</action>
+
+      <check if="{{story_iteration_path}} is not null">
+        <action>Add "iterationPath": "{{story_iteration_path}}" to base_params</action>
+      </check>
+
+      <action>Call MCP: create_work_item with: base_params</action>
       <action>Store returned work item ID as {{azure_story_id}}</action>
 
       <!-- Add Azure ID to story file metadata -->
@@ -366,17 +379,24 @@
         <check if="azure_feature_id exists">
           <action>Ensure azure_feature_id: {{azure_feature_id}} is in frontmatter</action>
         </check>
+        <check if="{{story_iteration_path}} is not null">
+          <action>Add to frontmatter: azure_iteration_path: {{story_iteration_path}}</action>
+        </check>
       </check>
       <check if="story file does NOT have YAML frontmatter">
         <action>Add YAML frontmatter to story file:
 ---
 azure_story_id: {{azure_story_id}}
-azure_feature_id: {{azure_feature_id}}
+azure_feature_id: {{azure_feature_id}}{{#if story_iteration_path}}
+azure_iteration_path: {{story_iteration_path}}{{/if}}
 ---</action>
       </check>
 
       <action>Save story file with Azure metadata</action>
       <output>✅ Azure DevOps: Created User Story {{azure_story_id}} for {{story_key}}</output>
+      <check if="{{story_iteration_path}} is not null">
+        <output>   └─ Assigned to: {{story_iteration_path}}</output>
+      </check>
     </check>
 
     <action>Report completion</action>

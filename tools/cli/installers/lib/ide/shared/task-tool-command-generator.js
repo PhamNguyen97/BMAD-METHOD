@@ -263,6 +263,82 @@ Follow all instructions in the ${type} file exactly as written.
 
     return writtenCount;
   }
+
+  /**
+   * Generate task/tool command files using SLASH format (folder structure)
+   * Creates nested folders like: bmad/bmm/tasks/bmad-help.md
+   * This is Windows-compatible (colons not allowed in filenames)
+   *
+   * @param {string} projectDir - Project directory
+   * @param {string} bmadDir - BMAD installation directory
+   * @param {string} baseCommandsDir - Base commands directory for the IDE
+   * @returns {Object} Result with generated, tasks, tools counts
+   */
+  async generateSlashTaskToolCommands(projectDir, bmadDir, baseCommandsDir) {
+    const tasks = await this.loadTaskManifest(bmadDir);
+    const tools = await this.loadToolManifest(bmadDir);
+
+    // Filter to only standalone items
+    const standaloneTasks = tasks ? tasks.filter((t) => t.standalone === 'true' || t.standalone === true) : [];
+    const standaloneTools = tools ? tools.filter((t) => t.standalone === 'true' || t.standalone === true) : [];
+
+    let generatedCount = 0;
+
+    // Generate command files for tasks
+    for (const task of standaloneTasks) {
+      const commandContent = this.generateCommandContent(task, 'task');
+      // Use slash format: bmad/bmm/tasks/name.md
+      const slashPath = path.join('bmad', task.module, 'tasks', `${task.name}.md`);
+      const commandPath = path.join(baseCommandsDir, slashPath);
+      await fs.ensureDir(path.dirname(commandPath));
+      await fs.writeFile(commandPath, commandContent);
+      generatedCount++;
+    }
+
+    // Generate command files for tools
+    for (const tool of standaloneTools) {
+      const commandContent = this.generateCommandContent(tool, 'tool');
+      // Use slash format: bmad/bmm/tools/name.md
+      const slashPath = path.join('bmad', tool.module, 'tools', `${tool.name}.md`);
+      const commandPath = path.join(baseCommandsDir, slashPath);
+      await fs.ensureDir(path.dirname(commandPath));
+      await fs.writeFile(commandPath, commandContent);
+      generatedCount++;
+    }
+
+    return {
+      generated: generatedCount,
+      tasks: standaloneTasks.length,
+      tools: standaloneTools.length,
+    };
+  }
+
+  /**
+   * Write task/tool artifacts using SLASH format (folder structure)
+   * Creates nested folders like: bmad/bmm/tasks/bmad-help.md
+   * This is Windows-compatible (colons not allowed in filenames)
+   *
+   * @param {string} baseCommandsDir - Base commands directory for the IDE
+   * @param {Array} artifacts - Task/tool artifacts with relativePath
+   * @returns {number} Count of commands written
+   */
+  async writeSlashArtifacts(baseCommandsDir, artifacts) {
+    let writtenCount = 0;
+
+    for (const artifact of artifacts) {
+      if (artifact.type === 'task' || artifact.type === 'tool') {
+        const commandContent = this.generateCommandContent(artifact, artifact.type);
+        // Use slash format: bmad/module/name.md
+        const slashPath = path.join('bmad', artifact.relativePath);
+        const commandPath = path.join(baseCommandsDir, slashPath);
+        await fs.ensureDir(path.dirname(commandPath));
+        await fs.writeFile(commandPath, commandContent);
+        writtenCount++;
+      }
+    }
+
+    return writtenCount;
+  }
 }
 
 module.exports = { TaskToolCommandGenerator };

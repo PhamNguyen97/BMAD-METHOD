@@ -21,3 +21,20 @@ tags:
   - task-tracking
   - integration
   - mcp
+
+# Azure DevOps Configuration
+azure_collection:
+  prompt:
+    - "What is your Azure DevOps collection/project name?"
+    - "This is the name of your Azure DevOps organization or project (e.g., 'MyCompany' or 'MyProject')."
+    - "Used for: Work item paths, iteration paths, and Azure DevOps MCP configuration."
+  default: "{directory_name}"
+  result: "{value}"
+
+azure_team:
+  prompt:
+    - "What is your Azure DevOps team name/board name?"
+    - "This is the name of your team board in Azure DevOps (e.g., 'MyTeam')."
+    - "Used for: Iteration assignment, team-specific work items, and sprint tracking."
+  default: "{directory_name}"
+  result: "{value}"

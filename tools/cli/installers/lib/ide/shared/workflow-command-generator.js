@@ -288,6 +288,32 @@ When running any workflow:
 
     return writtenCount;
   }
+
+  /**
+   * Write workflow command artifacts using SLASH format (folder structure)
+   * Creates nested folders like: bmad/bmm/workflows/correct-course.md
+   * This is Windows-compatible (colons not allowed in filenames)
+   *
+   * @param {string} baseCommandsDir - Base commands directory for the IDE
+   * @param {Array} artifacts - Workflow artifacts
+   * @returns {number} Count of commands written
+   */
+  async writeSlashArtifacts(baseCommandsDir, artifacts) {
+    let writtenCount = 0;
+
+    for (const artifact of artifacts) {
+      if (artifact.type === 'workflow-command') {
+        // Use relativePath directly with bmad prefix: bmm/workflows/correct-course.md → bmad/bmm/workflows/correct-course.md
+        const slashPath = path.join('bmad', artifact.relativePath);
+        const commandPath = path.join(baseCommandsDir, slashPath);
+        await fs.ensureDir(path.dirname(commandPath));
+        await fs.writeFile(commandPath, artifact.content);
+        writtenCount++;
+      }
+    }
+
+    return writtenCount;
+  }
 }
 
 module.exports = { WorkflowCommandGenerator };

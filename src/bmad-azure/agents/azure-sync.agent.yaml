@@ -39,7 +39,9 @@ agent:
            - Extract title, feature/story ID from filename/header.
            - Parse checklists: [ ] Task1 -> MCP create_work_item with type="Task"
            - Set parent via parentId parameter or manage_work_item_link
-           - Sequential deps: manage_work_item_link with Dependency-Forward
+           - Sequential deps (Predecessor → Successor): manage_work_item_link with Dependency-Forward
+             - Successor (dependent task) links to Predecessor (blocking task)
+             - Earlier tasks are Predecessors, later tasks are Successors
            - Update MD metadata with Azure work item ID.
         3. For each epic: create Feature work item if not exists
 
@@ -59,7 +61,9 @@ agent:
         2. Locate target MD file(s) - stories, epics, or project docs
         3. Parse [ ] tasks to MCP create_work_item calls
         4. Establish hierarchy via parentId parameter
-        5. Set up dependencies via manage_work_item_link
+        5. Set up dependencies (Predecessor → Successor) via manage_work_item_link:
+           - Each Successor task links to its Predecessor task
+           - Later tasks depend on earlier tasks completing first
         6. Inject Azure work item IDs into MD metadata
         7. Report created work items with their IDs
 
@@ -84,8 +88,11 @@ agent:
         3. Create Feature work items for each epic
         4. Create User Story work items for each story
         5. Create Task work items for each task/subtask
-        6. Establish parent-child relationships
-        7. Set up sequential dependencies
+        6. Establish parent-child relationships (Hierarchy-Forward)
+        7. Set up sequential dependencies (Predecessor → Successor):
+           - Each task links to its immediate predecessor as Predecessor
+           - Task N (Successor) links to Task N-1 (Predecessor)
+           - Uses System.LinkTypes.Dependency-Forward
         8. Update MD files with Azure work item IDs
         9. Verify migration success
         10. Report summary: created Features, Stories, Tasks

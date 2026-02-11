@@ -159,9 +159,12 @@ class ClaudeCodeSetup extends BaseIdeSetup {
     const agentGen = new AgentCommandGenerator(this.bmadFolderName);
     const { artifacts: agentArtifacts, counts: agentCounts } = await agentGen.collectAgentArtifacts(bmadDir, options.selectedModules || []);
 
-    // Write agent launcher files using flat colon naming
-    // Creates files like: bmad:bmm:pm.md
-    const agentCount = await agentGen.writeColonArtifacts(commandsDir, agentArtifacts);
+    // Write agent launcher files - use slash format on Windows (colons not allowed in filenames)
+    // Creates files like: bmad:bmm:pm.md (Unix) or bmad/bmm/pm.md (Windows with folder structure)
+    const useSlashFormat = process.platform === 'win32';
+    const agentCount = useSlashFormat
+      ? await agentGen.writeSlashArtifacts(commandsDir, agentArtifacts)
+      : await agentGen.writeColonArtifacts(commandsDir, agentArtifacts);
 
     // Process Claude Code specific injections for installed modules
     // Use pre-collected configuration if available, or skip if already configured
@@ -182,13 +185,17 @@ class ClaudeCodeSetup extends BaseIdeSetup {
     const workflowGen = new WorkflowCommandGenerator(this.bmadFolderName);
     const { artifacts: workflowArtifacts } = await workflowGen.collectWorkflowArtifacts(bmadDir);
 
-    // Write workflow-command artifacts using flat colon naming
-    // Creates files like: bmad:bmm:correct-course.md
-    const workflowCommandCount = await workflowGen.writeColonArtifacts(commandsDir, workflowArtifacts);
+    // Write workflow-command artifacts - use slash format on Windows
+    // Creates files like: bmad:bmm:correct-course.md (Unix) or bmad/bmm/correct-course.md (Windows with folder structure)
+    const workflowCommandCount = useSlashFormat
+      ? await workflowGen.writeSlashArtifacts(commandsDir, workflowArtifacts)
+      : await workflowGen.writeColonArtifacts(commandsDir, workflowArtifacts);
 
-    // Generate task and tool commands from manifests (if they exist)
+    // Generate task and tool commands from manifests - use slash format on Windows
     const taskToolGen = new TaskToolCommandGenerator();
-    const taskToolResult = await taskToolGen.generateColonTaskToolCommands(projectDir, bmadDir, commandsDir);
+    const taskToolResult = useSlashFormat
+      ? await taskToolGen.generateSlashTaskToolCommands(projectDir, bmadDir, commandsDir)
+      : await taskToolGen.generateColonTaskToolCommands(projectDir, bmadDir, commandsDir);
 
     console.log(chalk.green(`✓ ${this.name} configured:`));
     console.log(chalk.dim(`  - ${agentCount} agents installed`));

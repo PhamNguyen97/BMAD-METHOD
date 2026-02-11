@@ -144,6 +144,32 @@ class AgentCommandGenerator {
   }
 
   /**
+   * Write agent launcher artifacts using SLASH format (folder structure)
+   * Creates nested folders like: bmad/core/agents/pm.md
+   * This is Windows-compatible (colons not allowed in filenames)
+   *
+   * @param {string} baseCommandsDir - Base commands directory for the IDE
+   * @param {Array} artifacts - Agent launcher artifacts
+   * @returns {number} Count of launchers written
+   */
+  async writeSlashArtifacts(baseCommandsDir, artifacts) {
+    let writtenCount = 0;
+
+    for (const artifact of artifacts) {
+      if (artifact.type === 'agent-launcher') {
+        // Use relativePath directly with bmad prefix: core/agents/pm.md → bmad/core/agents/pm.md
+        const slashPath = path.join('bmad', artifact.relativePath);
+        const launcherPath = path.join(baseCommandsDir, slashPath);
+        await fs.ensureDir(path.dirname(launcherPath));
+        await fs.writeFile(launcherPath, artifact.content);
+        writtenCount++;
+      }
+    }
+
+    return writtenCount;
+  }
+
+  /**
    * Get the custom agent name in colon format
    * @param {string} agentName - Custom agent name
    * @returns {string} Colon-formatted filename

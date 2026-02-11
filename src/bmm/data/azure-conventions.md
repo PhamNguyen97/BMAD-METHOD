@@ -20,10 +20,16 @@ The Azure DevOps MCP server is configured in `.mcp.json`:
 
 ```json
 {
-  "azureDevOps": {
-    "orgUrl": "https://<azure-domain>/<azure-collection>",
-    "project": "<azure-collection>",
-    "teamBoard": "<azure-team>"
+  "azure-devops":{
+    "name": "azure-devops",
+    "url": "http://azure-mcp.url/mcp",
+    "type": "http",
+    "headers": {
+      "X-AzureDevOps-Org": "https://<azure-domain>/{azure_collection}",       
+      "X-AzureDevOps-PAT": "your pat",
+      "X-AzureDevOps-Default-Project": "{azure_project}",
+      "X-AzureDevOps-Allowed-Team-Boards": "{azure_team}"
+    }
   }
 }
 ```
@@ -46,9 +52,25 @@ The Azure DevOps MCP server is configured in `.mcp.json`:
   - Use when: Creating parent-child relationships (Feature → User Story → Task)
   - Direction: Forward (parent to child)
 
-- **Dependency**: `System.LinkTypes.Dependency-Forward`
-  - Use when: Task B depends on Task A (blocking relationship)
-  - Direction: Forward (dependent → blocked-by)
+- **Dependency (Predecessor → Successor)**: `System.LinkTypes.Dependency-Forward`
+  - **Predecessor**: Task that must complete FIRST (blocks other tasks)
+  - **Successor**: Task that depends on the predecessor (blocked by predecessor)
+  - Use when: Task B (Successor) depends on Task A (Predecessor) - A must complete before B can start
+  - Direction: Forward (Successor → Predecessor) - the dependent task links to the task it depends on
+  - **Example**: If Task A is Predecessor of Task B, then B is Successor of A (A then B)
+
+### Predecessor and Successor Relationship Summary
+
+| Relationship | Meaning | Order | Azure Link Direction |
+|--------------|---------|-------|---------------------|
+| **A is Successor of B** | B must complete before A can start | B → A | A links to B |
+| **A is Predecessor of B** | A must complete before B can start | A → B | B links to A |
+
+**Key Points:**
+- The **Successor** (dependent task) always creates the link to the **Predecessor** (blocking task)
+- If Task A is Predecessor of Task B: Task B will link to Task A
+- If Task A is Successor of Task B: Task A will link to Task B
+- In both cases: Predecessor completes FIRST, then Successor can start
 
 ---
 
@@ -83,7 +105,7 @@ New → Active → Resolved → Closed
 ```xml
 <action>Call MCP: list_work_items with:
 {
-  "wiql": "SELECT [System.Id], [System.Title], [System.State], [System.WorkItemType] FROM WorkItems WHERE [System.TeamProject] = '<azure-collection>' AND [System.WorkItemType] = 'User Story' AND [System.State] = 'Active' ORDER BY [System.Id]"
+  "wiql": "SELECT [System.Id], [System.Title], [System.State], [System.WorkItemType] FROM WorkItems WHERE [System.TeamProject] = '{azure_collection}' AND [System.WorkItemType] = 'User Story' AND [System.State] = 'Active' ORDER BY [System.Id]"
 }
 </action>
 ```
@@ -92,14 +114,14 @@ New → Active → Resolved → Closed
 ```xml
 <action>Call MCP: list_work_items with:
 {
-  "wiql": "SELECT [System.Id], [System.Title], [System.State] FROM WorkItems WHERE [System.TeamProject] = '<azure-collection>' AND [System.WorkItemType] = 'Feature' ORDER BY [System.Id]"
+  "wiql": "SELECT [System.Id], [System.Title], [System.State] FROM WorkItems WHERE [System.TeamProject] = '{azure_collection}' AND [System.WorkItemType] = 'Feature' ORDER BY [System.Id]"
 }
 </action>
 ```
 
 ### 2. Create Work Item
 
-**Create a User Story under a Feature:**
+**Create a User Story under a Feature (include Target Date):**
 ```xml
 <action>Call MCP: create_work_item with:
 {
@@ -108,7 +130,10 @@ New → Active → Resolved → Closed
   "description": "<div><p>HTML formatted description</p></div>",
   "parentId": 123456,
   "priority": 2,
-  "areaPath": "<azure-collection>\\<azure-team>"
+  "areaPath": "{azure_collection}\\{azure_team}",
+  "additionalFields": {
+    "Microsoft.VSTS.Scheduling.TargetDate": "2026-01-30"
+  }
 }
 </action>
 ```
@@ -122,7 +147,7 @@ New → Active → Resolved → Closed
   "description": "<div><p>Found during code review...</p></div>",
   "parentId": 234567,
   "priority": 1,
-  "areaPath": "<azure-collection>\\<azure-team>",
+  "areaPath": "{azure_collection}\\{azure_team}",
   "severity": "2 - High"
 }
 </action>
@@ -130,22 +155,48 @@ New → Active → Resolved → Closed
 
 ### 3. Update Work Item State
 
-**Mark story as Active:**
+**CRITICAL: Always include date fields when updating work item time tracking**
+
+When updating work items in the tracking system, always add "Start Date" and "Target Date" (not "End Date"):
+
+- **Start Date** (`Microsoft.VSTS.Scheduling.StartDate`): Set when work begins (state → Active)
+- **Target Date** (`Microsoft.VSTS.Scheduling.TargetDate`): Set when work is ready for review/completion (state → Resolved/Closed)
+
+**Mark story as Active (include Start Date):**
 ```xml
 <action>Call MCP: update_work_item with:
 {
   "workItemId": 234567,
-  "state": "Active"
+  "state": "Active",
+  "additionalFields": {
+    "Microsoft.VSTS.Scheduling.StartDate": "2026-01-23"
+  }
 }
 </action>
 ```
 
-**Mark task as Closed:**
+**Mark story as Resolved (include Target Date):**
+```xml
+<action>Call MCP: update_work_item with:
+{
+  "workItemId": 234567,
+  "state": "Resolved",
+  "additionalFields": {
+    "Microsoft.VSTS.Scheduling.TargetDate": "2026-01-25"
+  }
+}
+</action>
+```
+
+**Mark task as Closed (include Target Date):**
 ```xml
 <action>Call MCP: update_work_item with:
 {
   "workItemId": 345678,
-  "state": "Closed"
+  "state": "Closed",
+  "additionalFields": {
+    "Microsoft.VSTS.Scheduling.TargetDate": "2026-01-24"
+  }
 }
 </action>
 ```
@@ -164,14 +215,19 @@ New → Active → Resolved → Closed
 </action>
 ```
 
-### 5. Create Dependency Link
+### 5. Create Dependency Link (Predecessor → Successor)
 
-**Task B depends on Task A:**
+**Task B (Successor) depends on Task A (Predecessor):**
+- Task A (Predecessor) must complete FIRST
+- Task B (Successor) is blocked by Task A
+- B is Successor of A (A then B)
+- A is Predecessor of B (A then B)
+
 ```xml
 <action>Call MCP: manage_work_item_link with:
 {
-  "sourceWorkItemId": 456789,
-  "targetWorkItemId": 345678,
+  "sourceWorkItemId": 456789,  <!-- Task B (Successor - dependent task) -->
+  "targetWorkItemId": 345678,  <!-- Task A (Predecessor - must complete first) -->
   "operation": "add",
   "relationType": "System.LinkTypes.Dependency-Forward"
 }
@@ -189,8 +245,8 @@ New → Active → Resolved → Closed
 title: "User Authentication Story"
 azure_feature_id: 123456
 azure_story_id: 234567
-azure_project: <azure-collection>
-azure_org_url: https://<azure-domain>/<azure-collection>
+azure_project: {azure_collection}
+azure_org_url: https://<azure-domain>/{azure_collection}
 ---
 ```
 
@@ -199,8 +255,8 @@ azure_org_url: https://<azure-domain>/<azure-collection>
 ```markdown
 ## Azure DevOps Tracking
 
-- **Feature ID**: [123456](https://<azure-domain>/<azure-collection>/_workitems/edit/123456)
-- **User Story ID**: [234567](https://<azure-domain>/<azure-collection>/_workitems/edit/234567)
+- **Feature ID**: [123456](https://<azure-domain>/{azure_collection}/_workitems/edit/123456)
+- **User Story ID**: [234567](https://<azure-domain>/{azure_collection}/_workitems/edit/234567)
 - **State**: Active
 - **Last Sync**: 2026-01-22T10:30:00Z
 ```
@@ -251,7 +307,7 @@ azure_org_url: https://<azure-domain>/<azure-collection>
 
 ### Area Path Format
 ```
-<azure-collection>\<azure-team>\[Optional Feature Area]
+{azure_collection}\{azure_team}\[Optional Feature Area]
 ```
 
 ### Iteration Path Format
@@ -259,13 +315,42 @@ azure_org_url: https://<azure-domain>/<azure-collection>
 The iteration path of a team should be inside the team area:
 
 ```
-<azure-collection>\<azure-team>\Sprint N\[Optional Iteration]
+{azure_collection}\{azure_team}\Sprint N\[Optional Iteration]
 ```
 
 **Examples:**
 - `MyProject\MyTeam\Sprint 1`
 - `MyProject\MyTeam\Sprint 2\Iteration 1`
 - `MyProject\MyTeam\Sprint 3\Iteration 2`
+
+### Iteration Creation in Sprint Planning
+
+**When creating sprint iterations:**
+
+1. **Determine sprint number**: Auto-detect from Azure DevOps (query existing iterations) OR use `current_sprint_number` from config as fallback
+2. **Calculate dates**:
+   - `startDate`: Use `sprint_start_date` from config or current date (ISO 8601 format)
+   - `finishDate`: `startDate + sprint_duration_days` (default: 14 days)
+3. **Create iteration**: Use MCP `create_iteration` before creating Features
+4. **Assign iterationPath**: Format `{azure_collection}\{azure_team}\Sprint {{sprint_number}}`
+
+**Iteration Path Assignment Pattern:**
+
+```xml
+<action>Call MCP: create_work_item with:
+{
+  "workItemType": "Feature",
+  "title": "Epic {{epic_num}}: {{epic_title}}",
+  "iterationPath": "{azure_collection}\\{azure_team}\\Sprint {{sprint_number}}",
+  "areaPath": "{azure_collection}\\{azure_team}",
+  "state": "New"
+}</action>
+```
+
+**Error Handling:**
+- If iteration already exists: Reuse existing iteration, log info message
+- If iteration creation fails: Log warning, continue without iteration path assignment
+- If `auto_create_iterations` is false: Skip iteration creation entirely
 
 ---
 
@@ -359,7 +444,9 @@ Bulk migration workflow:
 1. For each high/medium severity finding:
    - Create Bug work item
    - Set parent to the User Story
-   - Create dependency link (story depends on bug fix)
+   - Create dependency link: Story (Successor) depends on Bug (Predecessor)
+     - Bug is Predecessor (must fix first)
+     - Story is Successor (blocked until bug is fixed)
 2. For low severity findings:
    - Create Task work item (optional)
 
@@ -478,6 +565,6 @@ After implementing Azure DevOps integration, verify:
 
 ## References
 
-- Azure DevOps REST API: https://learn.microsoft.com/en-us/rest/api/azure/devops/
-- WIQL Syntax: https://learn.microsoft.com/en-us/azure/devops/boards/queries/wiql-syntax
-- Work Item Types: https://learn.microsoft.com/en-us/azure/devops/boards/work-items/work-item-type
+- Azure DevOps REST API: <https://learn.microsoft.com/en-us/rest/api/azure/devops/>
+- WIQL Syntax: <https://learn.microsoft.com/en-us/azure/devops/boards/queries/wiql-syntax>
+- Work Item Types: <https://learn.microsoft.com/en-us/azure/devops/boards/work-items/work-item-type>
