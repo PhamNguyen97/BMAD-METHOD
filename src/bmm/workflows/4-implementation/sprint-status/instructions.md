@@ -47,12 +47,12 @@
 SELECT [System.Id], [System.Title], [System.State], [System.WorkItemType]
 FROM WorkItems
 WHERE [System.TeamProject] = '{azure_collection}'
-AND [System.WorkItemType] IN ('Feature', 'User Story', 'Task')
+AND [System.WorkItemType] IN ('Epic', 'User Story', 'Task')
 ORDER BY [System.WorkItemType], [System.Id]
 "</action>
     <action>Parse results:</action>
     - Map Azure states to BMAD stages: New→backlog, Active→in-progress, Resolved→review, Closed→done
-    - Count Features (Epics): by state (backlog/New, in-progress/Active, done/Closed)
+    - Count Epics: by state (backlog/New, in-progress/Active, done/Closed)
     - Count User Stories: by state
     - Count Tasks: by state
     <action>Set azure_data = parsed results</action>
@@ -74,8 +74,8 @@ Run `/bmad:bmm:workflows:sprint-planning` to generate it, then rerun sprint-stat
 <!-- Azure-based status parsing (Step 2.5) -->
 <step n="2.5" goal="Parse Azure DevOps data">
   <action>Parse Azure work item data:</action>
-  <action>For Features (epics):</action>
-  - Filter by workItemType = 'Feature'
+  <action>For Epics:</action>
+  - Filter by workItemType = 'Epic'
   - Map state: New→backlog, Active→in-progress, Closed→done
   - Count epic statuses: backlog, in-progress, done
 

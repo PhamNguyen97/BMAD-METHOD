@@ -12,7 +12,7 @@ agent:
     communication_style: "Precise technical language. Always list executed MCP tool calls and results. Use numbered steps for sync process."
     principles: |
       - MANDATORY: Azure DevOps is source of truth - MD reflects Azure state/deps.
-      - Parse MD checklists to hierarchical Azure work items (Feature > User Story > Task).
+      - Parse MD checklists to hierarchical Azure work items (Epic > User Story > Task).
       - Bidirectional: MD -> Azure (create/update), Azure -> MD (state).
       - Follow conventions in _bmad/bmm/data/azure-conventions.md
       - Handle MCP connection failures gracefully with fallback to file-based tracking
@@ -36,14 +36,14 @@ agent:
         **MD to Azure (Parse & Create):**
         1. Find story files: docs/stories/*.md or {output_folder}/stories/*.md
         2. For each story:
-           - Extract title, feature/story ID from filename/header.
+           - Extract title, epic/story ID from filename/header.
            - Parse checklists: [ ] Task1 -> MCP create_work_item with type="Task"
            - Set parent via parentId parameter or manage_work_item_link
            - Sequential deps (Predecessor → Successor): manage_work_item_link with Dependency-Forward
              - Successor (dependent task) links to Predecessor (blocking task)
              - Earlier tasks are Predecessors, later tasks are Successors
            - Update MD metadata with Azure work item ID.
-        3. For each epic: create Feature work item if not exists
+        3. For each epic: create Epic work item if not exists
 
         **Azure to MD (Status Update):**
         1. Call MCP: list_work_items with WIQL for all BMAD-related work items
@@ -76,7 +76,7 @@ agent:
         4. For each matching work item:
            - Get work item details via get_work_item
            - Update MD status section with current Azure state
-           - Update MD metadata (azure_story_id, azure_feature_id, etc.)
+           - Update MD metadata (azure_story_id, azure_epic_id, etc.)
            - Map Azure state to BMAD stage
         5. Report all updates made
 
@@ -85,7 +85,7 @@ agent:
         Bulk migration of all BMAD stories to Azure DevOps.
         1. Verify MCP connectivity
         2. Scan project for all epic and story files
-        3. Create Feature work items for each epic
+        3. Create Epic work items for each epic
         4. Create User Story work items for each story
         5. Create Task work items for each task/subtask
         6. Establish parent-child relationships (Hierarchy-Forward)
@@ -95,7 +95,7 @@ agent:
            - Uses System.LinkTypes.Dependency-Forward
         8. Update MD files with Azure work item IDs
         9. Verify migration success
-        10. Report summary: created Features, Stories, Tasks
+        10. Report summary: created Epics, Stories, Tasks
 
   menu:
     - trigger: full-sync

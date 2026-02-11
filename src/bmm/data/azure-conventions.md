@@ -40,8 +40,8 @@ The Azure DevOps MCP server is configured in `.mcp.json`:
 
 | BMAD Concept | Azure DevOps Type | Parent Relationship | Example ID |
 |--------------|------------------|---------------------|------------|
-| **Epic** | Feature | None | `123456` |
-| **Story** | User Story | Feature (parent) | `234567` |
+| **Epic** | Epic | None | `123456` |
+| **Story** | User Story | Epic (parent) | `234567` |
 | **Task** | Task | User Story (parent) | `345678` |
 | **Subtask** | Task | Task (parent) | `456789` |
 | **Review Finding** | Bug | User Story (parent) | `567890` |
@@ -49,7 +49,7 @@ The Azure DevOps MCP server is configured in `.mcp.json`:
 ### Link Type Reference Names
 
 - **Parent-Child**: `System.LinkTypes.Hierarchy-Forward`
-  - Use when: Creating parent-child relationships (Feature → User Story → Task)
+  - Use when: Creating parent-child relationships (Epic → User Story → Task)
   - Direction: Forward (parent to child)
 
 - **Dependency (Predecessor → Successor)**: `System.LinkTypes.Dependency-Forward`
@@ -110,18 +110,18 @@ New → Active → Resolved → Closed
 </action>
 ```
 
-**Pattern for finding all Features:**
+**Pattern for finding all Epics:**
 ```xml
 <action>Call MCP: list_work_items with:
 {
-  "wiql": "SELECT [System.Id], [System.Title], [System.State] FROM WorkItems WHERE [System.TeamProject] = '{azure_collection}' AND [System.WorkItemType] = 'Feature' ORDER BY [System.Id]"
+  "wiql": "SELECT [System.Id], [System.Title], [System.State] FROM WorkItems WHERE [System.TeamProject] = '{azure_collection}' AND [System.WorkItemType] = 'Epic' ORDER BY [System.Id]"
 }
 </action>
 ```
 
 ### 2. Create Work Item
 
-**Create a User Story under a Feature (include Target Date):**
+**Create a User Story under an Epic (include Target Date):**
 ```xml
 <action>Call MCP: create_work_item with:
 {
@@ -203,7 +203,7 @@ When updating work items in the tracking system, always add "Start Date" and "Ta
 
 ### 4. Create Parent-Child Link
 
-**Link User Story to Feature:**
+**Link User Story to Epic:**
 ```xml
 <action>Call MCP: manage_work_item_link with:
 {
@@ -243,7 +243,7 @@ When updating work items in the tracking system, always add "Start Date" and "Ta
 ```yaml
 ---
 title: "User Authentication Story"
-azure_feature_id: 123456
+azure_epic_id: 123456
 azure_story_id: 234567
 azure_project: {azure_collection}
 azure_org_url: https://<azure-domain>/{azure_collection}
@@ -255,7 +255,7 @@ azure_org_url: https://<azure-domain>/{azure_collection}
 ```markdown
 ## Azure DevOps Tracking
 
-- **Feature ID**: [123456](https://<azure-domain>/{azure_collection}/_workitems/edit/123456)
+- **Epic ID**: [123456](https://<azure-domain>/{azure_collection}/_workitems/edit/123456)
 - **User Story ID**: [234567](https://<azure-domain>/{azure_collection}/_workitems/edit/234567)
 - **State**: Active
 - **Last Sync**: 2026-01-22T10:30:00Z
@@ -267,7 +267,7 @@ azure_org_url: https://<azure-domain>/{azure_collection}
 
 ### Title Patterns
 
-- **Features**: `Epic N: Descriptive name` (e.g., `Epic 1: User Authentication`)
+- **Epics**: `Epic N: Descriptive name` (e.g., `Epic 1: User Authentication`)
 - **User Stories**: `Story N-M: Actionable title` (e.g., `Story 1-2: Login form validation`)
 - **Tasks**: Start with verb (e.g., `Implement login form`, `Add unit tests for auth`)
 - **Bugs**: `Fix: Brief description` (e.g., `Fix: Null pointer in auth service`)
@@ -297,7 +297,7 @@ azure_org_url: https://<azure-domain>/{azure_collection}
 | BMAD Priority | Azure DevOps Priority | Use Case |
 |---------------|----------------------|----------|
 | Critical | 1 | Review findings (high severity), Blockers |
-| High | 2 | Stories, Tasks, Features |
+| High | 2 | Stories, Tasks, Epics |
 | Normal | 3 | Subtasks, Low-severity findings |
 | Low | 4 | Nice-to-have items |
 
@@ -339,7 +339,7 @@ The iteration path of a team should be inside the team area:
 ```xml
 <action>Call MCP: create_work_item with:
 {
-  "workItemType": "Feature",
+  "workItemType": "Epic",
   "title": "Epic {{epic_num}}: {{epic_title}}",
   "iterationPath": "{azure_collection}\\{azure_team}\\Sprint {{sprint_number}}",
   "areaPath": "{azure_collection}\\{azure_team}",
@@ -417,7 +417,7 @@ One-way sync from Azure to markdown:
 Bulk migration workflow:
 1. Scan all story files
 2. Create corresponding Azure work items
-3. Establish parent-child relationships
+3. Establish parent-child relationships (Epic → User Story → Task)
 4. Set up dependencies
 5. Verify migration success
 
@@ -474,7 +474,7 @@ node tools/azure/migrate-bmad-to-azure.js --verbose
 **What it does:**
 - Parses epic files (`epics.md` or `epics/` directory)
 - Parses story files for tasks/subtasks
-- Creates Features for each epic
+- Creates Epics for each epic
 - Creates User Stories for each story
 - Creates Tasks for each task/subtask
 - Sets up sequential blocking dependencies
@@ -515,7 +515,7 @@ After implementing Azure DevOps integration, verify:
 - [ ] `manage_work_item_link` creates dependencies visible in Azure portal
 - [ ] sprint-status workflow queries Azure for Active User Stories
 - [ ] dev-story workflow creates/updates Azure work items
-- [ ] create-story workflow creates User Stories with parent Features
+- [ ] create-story workflow creates User Stories with parent Epics
 - [ ] code-review workflow creates Bugs with dependency links
 - [ ] azure-sync agent performs bidirectional synchronization
 

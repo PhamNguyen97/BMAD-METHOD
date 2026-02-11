@@ -357,7 +357,7 @@
   "workItemType": "User Story",
   "title": "{{story_title}}",
   "description": "<div><p>{{story_summary}}</p></div>",
-  "parentId": {{azure_feature_id}},
+  "parentId": {{azure_epic_id}},
   "priority": 2,
   "areaPath": "{azure_collection}\\{azure_team}",
   "additionalFields": {
@@ -376,8 +376,8 @@
       <action>Read the story file frontmatter</action>
       <check if="story file has YAML frontmatter">
         <action>Add to frontmatter: azure_story_id: {{azure_story_id}}</action>
-        <check if="azure_feature_id exists">
-          <action>Ensure azure_feature_id: {{azure_feature_id}} is in frontmatter</action>
+        <check if="azure_epic_id exists">
+          <action>Ensure azure_epic_id: {{azure_epic_id}} is in frontmatter</action>
         </check>
         <check if="{{story_iteration_path}} is not null">
           <action>Add to frontmatter: azure_iteration_path: {{story_iteration_path}}</action>
@@ -387,7 +387,7 @@
         <action>Add YAML frontmatter to story file:
 ---
 azure_story_id: {{azure_story_id}}
-azure_feature_id: {{azure_feature_id}}{{#if story_iteration_path}}
+azure_epic_id: {{azure_epic_id}}{{#if story_iteration_path}}
 azure_iteration_path: {{story_iteration_path}}{{/if}}
 ---</action>
       </check>

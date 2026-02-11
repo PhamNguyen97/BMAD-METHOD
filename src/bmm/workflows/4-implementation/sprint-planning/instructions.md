@@ -2,7 +2,7 @@
 
 <critical>The workflow execution engine is governed by: {project-root}/_bmad/core/tasks/workflow.xml</critical>
 <critical>You MUST have already loaded and processed: {project-root}/_bmad/bmm/workflows/4-implementation/sprint-planning/workflow.yaml</critical>
-<critical>🔧 AZURE DEVOPS INTEGRATION - Creates Feature work items for each epic when MCP is available</critical>
+<critical>🔧 AZURE DEVOPS INTEGRATION - Creates Epic work items for each epic when MCP is available</critical>
 
 ## 📚 Document Discovery - Full Epic Loading
 
@@ -29,7 +29,7 @@
   <action>Try: Call MCP: list_work_items with wiql="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '{azure_project_id}'" and top=1</action>
   <check if="MCP call succeeds">
     <action>Set azure_available = true</action>
-    <output>ℹ️ Azure DevOps MCP connected - will create Feature work items for epics</output>
+    <output>ℹ️ Azure DevOps MCP connected - will create Epic work items for epics</output>
   </check>
   <check if="MCP call fails or times out">
     <output>🚫 Azure DevOps MCP not available</output>
@@ -47,7 +47,7 @@
 <!-- Azure DevOps Iteration Creation -->
 <step n="0.5" goal="Create or verify sprint iteration in Azure DevOps">
   <check if="azure_available == true AND auto_create_iterations == true">
-    <critical>🔧 AZURE DEVOPS ITERATION CREATION - Creates sprint iteration before Features</critical>
+    <critical>🔧 AZURE DEVOPS ITERATION CREATION - Creates sprint iteration before Epics</critical>
 
     <!-- Sprint number detection: Azure first, then sprint-status.yaml fallback -->
     <action>Determine current sprint number:</action>
@@ -236,12 +236,12 @@ development_status:
 <action>CRITICAL: Metadata appears TWICE - once as comments (#) for documentation, once as YAML key:value fields for parsing</action>
 <action>Ensure all items are ordered: epic, its stories, its retrospective, next epic...</action>
 
-<!-- Azure DevOps Feature creation for each epic -->
+<!-- Azure DevOps Epic creation for each epic -->
 <check if="azure_available == true">
-  <action>For each epic found in Step 1, create or find Azure Feature work item:</action>
+  <action>For each epic found in Step 1, create or find Azure Epic work item:</action>
   <action>Build create_work_item parameters:</action>
   <action>Set base_params = {
-  "workItemType": "Feature",
+  "workItemType": "Epic",
   "title": "Epic {{epic_num}}: {{epic_title}}",
   "description": "<div><p>Epic {{epic_num}} from {project_name}</p></div>",
   "state": "New",
@@ -253,8 +253,8 @@ development_status:
   </check>
 
   <action>Call MCP: create_work_item with: base_params</action>
-  <action>Store returned Feature ID as {{azure_feature_id_{{epic_num}}}</action>
-  <output>✅ Azure DevOps: Created Feature {{azure_feature_id_{{epic_num}}} for Epic {{epic_num}}</output>
+  <action>Store returned Epic ID as {{azure_epic_id_{{epic_num}}}</action>
+  <output>✅ Azure DevOps: Created Epic {{azure_epic_id_{{epic_num}}} for Epic {{epic_num}}</output>
   <output>   └─ Area: {azure_project_id}\\{azure_team}</output>
   <check if="{{iteration_path}} is not null">
     <output>   └─ Iteration: {{iteration_path}}</output>
