@@ -212,7 +212,9 @@
     original documents <!-- Extract specific story requirements -->
     <action>Extract our story ({{epic_num}}-{{story_num}}) details:</action> **STORY FOUNDATION:** - User story statement
     (As a, I want, so that) - Detailed acceptance criteria (already BDD formatted) - Technical requirements specific to this story -
-    Business context and value - Success criteria <!-- Previous story analysis for context continuity -->
+    Business context and value - Success criteria
+    <critical>🎯 EXTRACT ACCEPTANCE CRITERIA: Parse and store acceptance criteria from epic/story content into {{acceptance_criteria}} variable</critical>
+    <action>Set {{acceptance_criteria}} to the list of acceptance criteria extracted from story (formatted as HTML list items)</action> <!-- Previous story analysis for context continuity -->
     <check if="story_num > 1">
       <action>Load previous story file: {{story_dir}}/{{epic_num}}-{{previous_story_num}}-*.md</action> **PREVIOUS STORY INTELLIGENCE:** -
     Dev notes and learnings from previous story - Review feedback and corrections needed - Files that were created/modified and their
@@ -357,6 +359,7 @@
   "workItemType": "User Story",
   "title": "{{story_title}}",
   "description": "<div><p>{{story_summary}}</p></div>",
+  "acceptanceCriteria": "<div>{{acceptance_criteria}}</div>",
   "parentId": {{azure_epic_id}},
   "priority": 2,
   "areaPath": "{azure_collection}\\{azure_team}",

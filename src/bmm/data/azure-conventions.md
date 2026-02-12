@@ -121,13 +121,14 @@ New → Active → Resolved → Closed
 
 ### 2. Create Work Item
 
-**Create a User Story under an Epic (include Target Date):**
+**Create a User Story under an Epic (include Target Date and Acceptance Criteria):**
 ```xml
 <action>Call MCP: create_work_item with:
 {
   "workItemType": "User Story",
   "title": "Story title here",
   "description": "<div><p>HTML formatted description</p></div>",
+  "acceptanceCriteria": "<div><ul><li>Criterion 1</li><li>Criterion 2</li></ul></div>",
   "parentId": 123456,
   "priority": 2,
   "areaPath": "{azure_collection}\\{azure_team}",
@@ -137,6 +138,8 @@ New → Active → Resolved → Closed
 }
 </action>
 ```
+
+**Note:** Use separate `description` and `acceptanceCriteria` fields. Do NOT embed acceptance criteria in the description.
 
 **Create a Bug for code review findings:**
 ```xml
@@ -272,21 +275,28 @@ azure_org_url: https://<azure-domain>/{azure_collection}
 - **Tasks**: Start with verb (e.g., `Implement login form`, `Add unit tests for auth`)
 - **Bugs**: `Fix: Brief description` (e.g., `Fix: Null pointer in auth service`)
 
-### Description Format (HTML)
+### Field Format (Separate Fields)
 
+**Use separate `description` and `acceptanceCriteria` fields when creating work items.**
+
+**Description field** - HTML format with overview and technical details:
 ```html
 <div>
   <h3>Overview</h3>
   <p>Brief description of what this work item encompasses.</p>
 
-  <h3>Acceptance Criteria</h3>
+  <h3>Technical Notes</h3>
+  <p>Any technical implementation details.</p>
+</div>
+```
+
+**Acceptance Criteria field** - HTML format with bullet points:
+```html
+<div>
   <ul>
     <li>Criterion 1</li>
     <li>Criterion 2</li>
   </ul>
-
-  <h3>Technical Notes</h3>
-  <p>Any technical implementation details.</p>
 </div>
 ```
 
