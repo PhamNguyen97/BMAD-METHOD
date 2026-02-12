@@ -1,14 +1,16 @@
 code: bmm
-name: "BMad Method Agile-AI Driven-Development"
-description: "AI-driven agile development framework"
+name: "BMad Method Agile-AI Driven-Development (Azure Fork)"
+description: "AI-driven agile development framework with enhanced Azure DevOps integration"
 default_selected: true # This module will be selected by default for new installations
 version: 6.0.0
-author: "BMAD-METHOD"
+author: "nguyenpham97 (fork of BMAD-METHOD)"
 tags:
   - agile
   - ai-driven
   - task-tracking
   - workflows
+  - azure
+  - azure-devops
 
 # Variables from Core Config inserted:
 ## user_name

@@ -1,0 +1,51 @@
+# Sensitive configuration
+.mcp.json
+.claude/
+.env
+.env.*
+*.pem
+
+# Development files
+.github/
+.vscode/
+.husky/
+.git/
+.gitignore
+
+# Documentation (already hosted separately)
+docs/
+website/
+CNAME
+
+# Build artifacts
+node_modules/
+*.tgz
+*.log
+
+# Test files
+test/
+coverage/
+.nyc_output/
+
+# CI/CD
+.github/workflows/
+
+# Lock file (regenerated on install)
+package-lock.json
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Markdown linting
+.markdownlint-cli2.yaml
+
+# Other development files
+.prettierignore
+.eslintrc.*
+.nvmrc
+
+# Integration analysis (your local development docs)
+.integration_docs/

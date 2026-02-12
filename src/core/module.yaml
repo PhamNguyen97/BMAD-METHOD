@@ -1,5 +1,5 @@
 code: core
-name: "BMad Core Module"
+name: "BMad Core Module (Azure Fork)"
 
 header: "BMad Core Configuration"
 subheader: "Configure the core settings for your BMad installation.\nThese settings will be used across all modules and agents."
