@@ -290,7 +290,7 @@ azure_org_url: https://<azure-domain>/{azure_collection}
 </div>
 ```
 
-**Acceptance Criteria field** - HTML format with bullet points:
+**Acceptance Criteria field** - HTML format with bullet points (NO heading):
 ```html
 <div>
   <ul>
@@ -299,6 +299,8 @@ azure_org_url: https://<azure-domain>/{azure_collection}
   </ul>
 </div>
 ```
+
+**Note:** Do NOT include "Acceptance Criteria" or "##" heading - only the list items.
 
 ---
 
