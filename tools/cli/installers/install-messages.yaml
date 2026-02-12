@@ -6,6 +6,14 @@
 startMessage: |
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  🔄 This is the Azure Integration Fork of BMAD-METHOD
+
+  This fork adds enhanced Azure DevOps integration to the BMad framework:
+    - Bidirectional Azure DevOps sync
+    - Epic/Feature/Story/Task hierarchy support
+    - Sprint planning and iteration management
+    - Work item linking and status tracking
+
   ⭐ IMPORTANT: Version Alpha.23 Changes
 
   If your current version is older than Alpha.21, you'll need a fresh install:
@@ -19,11 +27,13 @@ startMessage: |
 
   📺 YouTube Master Class & Podcast launching February 1st!
 
-  💡 Love BMad? Please star us on GitHub & subscribe on YouTube!
-    - GitHub: https://github.com/PhamNguyen97/BMAD-METHOD/
+  💡 Love BMad? Star the repositories & subscribe on YouTube!
+    - Original BMad: https://github.com/bmad-code-org/BMAD-METHOD/
+    - Azure Fork: https://github.com/PhamNguyen97/BMAD-METHOD/
     - YouTube: https://www.youtube.com/@BMadCode
 
-  Latest updates: https://github.com/PhamNguyen97/BMAD-METHOD/blob/main/CHANGELOG.md
+  Latest updates: https://github.com/bmad-code-org/BMAD-METHOD/blob/main/CHANGELOG.md
+  Azure fork updates: https://github.com/PhamNguyen97/BMAD-METHOD/blob/main/CHANGELOG.md
 
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -48,10 +58,12 @@ endMessage: |
 
   📚 RESOURCES:
     - Docs: http://docs.bmad-method.org/ (bookmark it!)
-    - Changelog: https://github.com/PhamNguyen97/BMAD-METHOD/blob/main/CHANGELOG.md
+    - Original Changelog: https://github.com/bmad-code-org/BMAD-METHOD/blob/main/CHANGELOG.md
+    - Azure Fork Changelog: https://github.com/PhamNguyen97/BMAD-METHOD/blob/main/CHANGELOG.md
 
   ⭐⭐⭐ HELP US GROW:
-    - Star us on GitHub: https://github.com/PhamNguyen97/BMAD-METHOD/
+    - Original BMad: https://github.com/bmad-code-org/BMAD-METHOD/
+    - Azure Fork: https://github.com/PhamNguyen97/BMAD-METHOD/
     - Subscribe on YouTube: https://www.youtube.com/@BMadCode
     - Every star & sub helps us reach more developers!
 
